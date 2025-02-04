@@ -161,8 +161,8 @@ grid_search = GridSearchCV(
 grid_search.fit(x_train, y_train)
 
 # Visa de bästa parametrarna och poängen
-print("Best params:", grid_search.best_params_)
-print("Best score:", grid_search.best_score_)
+# print("Best params:", grid_search.best_params_)
+# print("Best score:", grid_search.best_score_)
 
 # Träna om modellen med de bästa parametrarna
 best_clf = grid_search.best_estimator_

@@ -27,4 +27,4 @@ y_pred_df = pd.DataFrame(y_pred_adjusted, columns=categories)
 final_RSS[categories] = y_pred_df
 
 # Kontrollera resultatet
-print(final_RSS[categories].head(20))
+print(final_RSS[categories].head(10))
