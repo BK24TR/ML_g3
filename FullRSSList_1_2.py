@@ -1,46 +1,19 @@
-"""
-FullRSSList_1_2.py
+# Description: This script extracts necessary fields 
+# (title, summary, link, published) from posts and returns a list of dictionaries.
+import RssArticles_1 
+from datetime import datetime
+import pandas as pd
 
-This script takes in articles (posts) from RssArticles_1.py (via `posts`),
-extracts the desired fields (title, summary, link, and published),
-fixes data format issues (like dates), and provides the final list as 'MyTheFinalList'.
-
-Students: 
- - Ensure your 'RssArticles_1.py' is in the same folder (or adjust imports accordingly).
- - Examine how 'posts' is structured, and fix any date format issues carefully.
-"""
-
-# 1) Import posts from RssArticles_1
-from RssArticles_1 import posts  # Import the posts list from another script
-#import re  # Importera regex-biblioteket
-from datetime import datetime # Importera datetime-biblioteket
-import pandas as pd # Importera pandas-biblioteket
-
-# Pseudo code: 
-# - create a function 'gettingNecessaryList' that loops through posts
-# - extract title, summary, link, published
-# - handle errors with try/except if fields are missing
-# - return the collected list
-
-def gettingNecessaryList():
-    """
-    This function loops through 'posts' and extracts:
-      title, summary, link, published
-    Then stores them in a dictionary, finally returns a list of these dictionaries.
-    """
-    # Pseudo code:
-    #  1. Initialize an empty list (allitems)
-    #  2. Loop through each 'post' in 'posts'
-    #  3. Create a temp dict for each 'post'
-    #  4. Extract needed keys; if missing, set to empty string
-    #  5. Append the dict to the list
-    #  6. Return allitems
-    
-# Funktion för att extrahera nödvändiga fält och hantera eventuella fel
 def gettingNecessaryList(posts):
     """
-    Extraherar nödvändiga fält (title, summary, link, published) från posts
-    och returnerar en lista av dictionaries.
+    Extracts necessary fields (title, summary, link, published) from posts
+    and returns a list of dictionaries.
+
+    Args:
+        posts (list): List of RSS articles, each as a dictionary.
+
+    Returns:
+        list: A list of dictionaries with filtered and necessary fields.
     """
     allitems = []
 
@@ -60,46 +33,44 @@ def gettingNecessaryList(posts):
 
 def format_date(date_str):
     """
-    Konverterar en RSS-datumsträng till formatet YYYY-MM-DD HH:MM:SS.
+    Converts an RSS date string to the format YYYY-MM-DD HH:MM:SS.
+
+    Args:
+        date_str (str): The date string from the RSS feed.
+
+    Returns:
+        str: A formatted date string or None if parsing fails.
     """
-    if not date_str or pd.isna(date_str):  # Hanterar saknade datum (None eller tom sträng)
+    if not date_str or pd.isna(date_str):
         return None
 
-    # Ersätt tidszonsförkortningar med motsvarande offset
-    date_str = date_str.replace("GMT", "+0000")  # Om GMT används, ersätt med UTC-offset
+    date_str = date_str.replace("GMT", "+0000")
 
-    # Testa olika format som RSS-flöden ofta använder
     date_formats = [
-        "%a, %d %b %Y %H:%M:%S %z",  # Exempel: "Mon, 03 Feb 2025 20:27:02 +0100"
-        "%Y-%m-%dT%H:%M:%S%z"       # Exempel: "2025-02-02T16:41:00+01:00"
+        "%a, %d %b %Y %H:%M:%S %z",  # Example: "Mon, 05 Feb 2025 13:00:00 +0000"
+        "%Y-%m-%dT%H:%M:%S%z"         # Example: "2025-02-05T13:00:00+0000"
     ]
 
     for fmt in date_formats:
         try:
-            # Försök att parsa datumsträngen med det aktuella formatet
             parsed_date = datetime.strptime(date_str, fmt)
-            return parsed_date.strftime("%Y-%m-%d %H:%M:%S")  # Standardiserat format
+            return parsed_date.strftime("%Y-%m-%d %H:%M:%S")
         except ValueError:
-            continue  # Om det misslyckas, testa nästa format
+            continue
 
-    # Om inget format fungerar, skriv ut datumet för debugging
-    print("Okänt format, kunde inte parsas:", date_str)
+    print("Unknown format, could not parse:", date_str)
     return None
-
 
 def ThefinalList(AllItemsX):
     """
-    This function converts AllItemsX into a final 2D list (or list of lists),
-    while ensuring that 'published' is properly formatted (YYYY-MM-DD HH:MM:SS).
+    Converts AllItemsX into a final 2D list, ensuring 'published' is formatted.
+
+    Args:
+        AllItemsX (list): List of dictionaries with RSS article data.
+
+    Returns:
+        list: A list of lists with [title, summary, link, published].
     """
-    # Pseudo code:
-    #  1. Initialize finalList = []
-    #  2. For each item (dict) in AllItemsX:
-    #       a) Extract title, summary, link, published
-    #       b) Parse 'published' date with multiple possible formats
-    #       c) Append results as a small list [title, summary, link, published_str] to finalList
-    #  3. Return finalList
-    
     finalList = []
 
     for item in AllItemsX:
@@ -108,18 +79,36 @@ def ThefinalList(AllItemsX):
         link = item.get("link", "")
         published = format_date(item.get("published", ""))
 
-        # Lägg bara till poster med giltigt datum
-        if published:  # Kontrollera att datumet inte är None
+        if published:  # Only include items with valid published dates
             finalList.append([title, summary, link, published])
     
     return finalList
 
-# Extraherar nödvändiga fält från 'posts'
-AllItemsX = gettingNecessaryList(posts)
+def main():
+    """
+    Main function to orchestrate the process of extracting and formatting RSS data.
+    """
+    #RssArticles_1.main()
+    posts = RssArticles_1.posts
 
-# 3) Create a variable that holds the final list
-MyTheFinalList = ThefinalList(AllItemsX)
+    print('-----Starting FullRSSList_1_2.py-----')
 
-# Skriver ut resultatet
-print(MyTheFinalList)
-print(f"Antal giltiga poster: {len(MyTheFinalList)}")
+    # Extract necessary fields from the raw RSS posts
+    print("Extracting necessary fields from posts...")
+    all_items = gettingNecessaryList(posts)
+
+    # Create the final list with formatted dates
+    print("Creating the final list...")
+    final_list = ThefinalList(all_items)
+
+    # Print the final list and its length
+    #print(final_list)
+    print(f"Number of valid posts: {len(final_list)}")
+
+    # Expose the final list as a global variable for other scripts
+    global MyTheFinalList
+    MyTheFinalList = final_list
+
+# Entry point for the script
+if __name__ == "__main__":
+    main()

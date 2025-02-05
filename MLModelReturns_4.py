@@ -1,41 +1,46 @@
-"""
-MLModelReturns_4.py
+# Description: This script is the fourth script in the pipeline. 
+# It imports the output from the previous scripts and uses the ML model 
+# to predict the categories of the new articles. It then combines the predictions 
+# with the final list of articles and validates the final structure with a JSON 
+# schema. The final list is saved as 'validDict' for further processing.
 
-This script will:
-  - Import 'MyTheFinalList' from FullRSSList_1_2.py
-  - Import the trained model (best_clf_pipeline) + supporting objects (categories, vectorizer, etc.) 
-    from MLModelMLC_3.py
-  - Use the model to predict categories for the newly fetched RSS articles.
-  - Combine the predictions with the final list from 'MyTheFinalList' and possibly produce a
-    validated dictionary (validDict).
-
-Students:
- - Complete the pseudo code to transform text, get predictions,
-   and merge them with the 'MyTheFinalList'.
-"""
-
-# 1) Imports
-from FullRSSList_1_2 import MyTheFinalList
-from MLModelMLC_3 import categories, x_train, vectorizer, best_clf_pipeline
-from RssFeedNewArticle_2 import printdepositlist
+import RssFeedNewArticle_2
+import MLModelMLC_3
+import FullRSSList_1_2
 
 import jsonschema
-import pickle
 
 def main():
-    # 1. Ta text från 'printdepositlist' (title+summary)
-    my_text = printdepositlist  # Assuming this is a list of combined title + summary strings
+    MLModelMLC_3.main() # Run the ML model training script
+    categories = MLModelMLC_3.categories # Import the categories
+    vectorizer = MLModelMLC_3.vectorizer # Import the vectorizer
+    best_clf_pipeline = MLModelMLC_3.best_clf_pipeline # Import the best classifier pipeline
+
+    RssFeedNewArticle_2.main() # Run the RSS feed script
+    printdepositlist = RssFeedNewArticle_2.printdepositlist # Import the printdepositlist
+
+    FullRSSList_1_2.main()  # Run the FullRSSList script
+    MyTheFinalList = FullRSSList_1_2.MyTheFinalList # Import the MyTheFinalList
     
-    # 2. Filtrera bort tomma strängar
+    print('-----Starting MLModelReturns_4.py-----')
+
+    # 1. Extract text from 'printdepositlist' (title + summary)
+    print("Extracting title+summary from 'printdepositlist'...")
+    my_text = printdepositlist  # Assuming this is a list of combined title + summary strings
+
+    # 2. Remove empty strings
     my_text_no_empty = [t for t in my_text if t.strip() != ""]
 
-    # 3. Transformera text med vectorizer
+    # 3. Transform text using vectorizer
+    print("Transforming text with vectorizer...")
     my_text_transformed = vectorizer.transform(my_text_no_empty)
 
-    # 4. Prediktera kategorier med modellen
+    # 4. Predict categories with the model
+    print("Predicting categories with the model...")
     predictions = best_clf_pipeline.predict_proba(my_text_transformed)
 
-    # 5. Bestäm kategorier baserat på en tröskel
+    # 5. Assign categories based on a threshold
+    print("Assigning categories based on a threshold...")
     threshold = 0.3
     results = {}  # dict of text -> list of predicted categories
     for idx, pvector in enumerate(predictions):
@@ -43,7 +48,8 @@ def main():
         predicted_categories = [categories[i] for i, prob in enumerate(pvector) if prob >= threshold]
         results[text] = predicted_categories
 
-    # 6. Kombinera 'results' med 'MyTheFinalList'
+    # 6. Combine 'results' with 'MyTheFinalList'
+    print("Combining the predictions with the final list...")
     combinedList = []
     for idx, item in enumerate(MyTheFinalList):
         title, summary, link, published = item
@@ -51,11 +57,12 @@ def main():
         predicted_topics = results.get(text, [])
         combinedList.append([title, summary, link, published, predicted_topics])
 
-    # 7. Skapa en slutlig lista med dicts
+    # 7. Create a final list with dictionaries
     key_list = ['title', 'summary', 'link', 'published', 'topic']
     finalDict = [dict(zip(key_list, v)) for v in combinedList]
 
-    # 8. Validera slutlig struktur med JSON-schema (valfritt)
+    # 8. Validate final structure with JSON schema (optional)
+    print("Validating final structure with JSON schema...")
     schema = {
         "type": "object",
         "properties": {
@@ -67,7 +74,7 @@ def main():
         },
         "required": ["title", "summary", "link", "published", "topic"]
     }
-    
+
     valid_list = []
     for item in finalDict:
         try:
@@ -76,19 +83,13 @@ def main():
         except jsonschema.exceptions.ValidationError as e:
             print(f"Validation error for item {item}: {e}")
 
-    # 9. Exportera den validerade listan 'validDict'
-    global validDict # Så att vi kan spara den senare
+    # 9. Export the validated list as 'validDict'
+    global validDict  # To allow saving it later
     validDict = valid_list
-    print("Validated dictionary:", validDict)
-    #print(f"Total valid items: {len(valid_list)}") #För att validera antalet som gick igenom
-    
-    # Spara validDict i en pickle-fil
-    with open("validDict.pkl", "wb") as file:
-      pickle.dump(validDict, file)
-  
+    print(f"Number of valid dictionaries: {len(valid_list)}")
+    #print("Validated dictionary:", validDict)
+    print(f"First Article (Verify appearance): {validDict[0]}")
 
-# Kör scriptet
+# Run the script
 if __name__ == "__main__":
-  main()
-
-  
+    main()
