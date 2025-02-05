@@ -16,10 +16,10 @@ def main():
     vectorizer = MLModelMLC_3.vectorizer # Import the vectorizer
     best_clf_pipeline = MLModelMLC_3.best_clf_pipeline # Import the best classifier pipeline
 
-    RssFeedNewArticle_2.main() # Run the RSS feed script
+    RssFeedNewArticle_2.main() # Run the RSS feed script (also runs the RssArticles_1 script inside, so posts are available)
     printdepositlist = RssFeedNewArticle_2.printdepositlist # Import the printdepositlist
 
-    FullRSSList_1_2.main()  # Run the FullRSSList script
+    FullRSSList_1_2.main()  # Run the FullRSSList script (needs posts from RssArticles_1, activated from RssFeedNewArticle_2)
     MyTheFinalList = FullRSSList_1_2.MyTheFinalList # Import the MyTheFinalList
     
     print('-----Starting MLModelReturns_4.py-----')

@@ -82,7 +82,7 @@ def main():
     """
     Main function to process articles and print the results.
     """
-    RssArticles_1.main()
+    RssArticles_1.main() # Run the RssArticles_1 script
     posts = RssArticles_1.posts
 
     print('-----Starting RssFeedNewArticle_2.py-----')

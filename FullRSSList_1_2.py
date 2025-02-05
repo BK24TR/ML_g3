@@ -88,7 +88,6 @@ def main():
     """
     Main function to orchestrate the process of extracting and formatting RSS data.
     """
-    #RssArticles_1.main()
     posts = RssArticles_1.posts
 
     print('-----Starting FullRSSList_1_2.py-----')
