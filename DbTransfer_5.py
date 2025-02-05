@@ -108,5 +108,4 @@ def main():
         print("Ingen databasanslutning kunde etableras.")
 
 if __name__ == "__main__":
-    MLModelReturns_4.main()
     main()
