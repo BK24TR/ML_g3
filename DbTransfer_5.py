@@ -1,34 +1,21 @@
-"""
-DbTransfer_5.py
+# Description: This script is responsible for transferring the processed data 
+# from MLModelReturns_4 to the MySQL database.
 
-This script will:
-  - Import the final structured/validated data (e.g., `validDict`) from MLModelReturns_4.py
-  - Connect to a MySQL database
-  - Insert each record into a table (e.g., `news`) with columns: (title, summary, link, published, topic).
-
-Students:
- - Fill out the pseudo code to connect to the DB, handle potential errors,
-   and insert data in a loop or with executemany.
-"""
-
-import MLModelReturns_4 
+import MLModelReturns_4
 import mysql.connector
-import pickle
-
-# Ladda validDict från pickle-filen
-with open("validDict.pkl", "rb") as file:
-    validDict = pickle.load(file)
 
 def db_connection():
     """
-    Skapa och returnera en databasanslutning.
+    Establishes a connection to the MySQL database.
+    Returns:
+        connection: MySQL database connection object.
     """
     try:
         cnxn = mysql.connector.connect(
-            host="localhost",  # Databasvärd
-            user="root",       # Användarnamn
-            password="dinmamma",  # Lösenord
-            database="ArtiklarDB"  # Databasnamn
+            host="localhost",  # Hostname
+            user="root",       # Username
+            password="dinmamma",  # Password
+            database="ArtiklarDB"  # Database name
         )
         print("Connected to the database.")
         return cnxn
@@ -38,12 +25,12 @@ def db_connection():
 
 def article_exists(link, cnxn):
     """
-    Kontrollera om en artikel med samma länk redan finns i databasen.
+    Checks if an article already exists in the database using its link.
     Args:
-        link (str): Artikellänken att kontrollera.
-        cnxn: Databasanslutningen.
+        link (str): The article link to check.
+        cnxn: MySQL database connection object.
     Returns:
-        bool: True om artikeln finns, annars False.
+        bool: True if the article exists, False otherwise.
     """
     cursor = cnxn.cursor()
     query = "SELECT COUNT(*) FROM news WHERE link = %s"
@@ -54,7 +41,10 @@ def article_exists(link, cnxn):
 
 def insert_data(data, cnxn):
     """
-    Infogar nya data i tabellen 'news' och undviker dubbletter.
+    Inserts new articles into the 'news' table while avoiding duplicates.
+    Args:
+        data (list): List of dictionaries representing articles.
+        cnxn: MySQL database connection object.
     """
     cursor = cnxn.cursor()
     insert_sql = """
@@ -67,9 +57,9 @@ def insert_data(data, cnxn):
     
     data_tuples = []
     for item in data:
-        if not article_exists(item['link'], cnxn):  # Kontrollera om artikeln redan finns
+        if not article_exists(item['link'], cnxn):  # Check if the article already exists
             categories = item['topic']
-            topic_string = ",".join(categories)  # Omvandla listan till en kommaseparerad sträng
+            topic_string = ",".join(categories)  # Convert the list to a comma-separated string
             data_tuples.append((
                 item['title'], item['summary'], item['link'], item['published'], topic_string,
                 1 if 'Politik' in categories else 0,
@@ -85,27 +75,34 @@ def insert_data(data, cnxn):
             ))
 
     try:
-        if data_tuples:  # Kontrollera att det finns nya data att lägga till
+        if data_tuples:  # Check if there are new articles to add
             cursor.executemany(insert_sql, data_tuples)
             cnxn.commit()
-            print(f"{cursor.rowcount} nya rader har lagts till i databasen.")
+            print(f"{cursor.rowcount} new rows added to the database.")
         else:
-            print("Inga nya artiklar att lägga till.")
+            print("No new articles to add.")
     except mysql.connector.Error as err:
-        print(f"Fel vid insättning av data: {err}")
+        print(f"Error inserting data: {err}")
     finally:
         cursor.close()
 
 def main():
-    # Anslut till databasen
+    """
+    Main function to handle database operations.
+    """
+    MLModelReturns_4.main()  # Ensure MLModelReturns_4 is run first
+    validDict = MLModelReturns_4.validDict  # Retrieve processed data from MLModelReturns_4
+
+    print('-----Starting DbTransfer_5.py-----')
+    # Connect to the database
     cnxn = db_connection()
     if cnxn:
-        # Infoga nya data
+        # Insert new data into the database
         insert_data(validDict, cnxn)
         cnxn.close()
-        print("Databasanvändning klar.")
+        print("Database operations completed.")
     else:
-        print("Ingen databasanslutning kunde etableras.")
+        print("No database connection could be established.")
 
 if __name__ == "__main__":
     main()
