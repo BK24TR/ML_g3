@@ -1,19 +1,8 @@
-"""
-MLModelMLC_3.py
+# Description: This script trains a machine learning model for multi-label 
+# classification using a Naive Bayes classifier.
 
-This script trains a multi-label text classification model using data from Book1.csv.
-It:
-  - Loads and preprocesses the data
-  - Trains a MultinomialNB-based OneVsRest model with GridSearchCV
-  - Prints out the best model and accuracy
-  - Exposes certain variables for import into other scripts:
-       categories, x_train, vectorizer, best_clf_pipeline
-"""
-
-import re
 import sys
 import warnings
-import pickle
 import nltk
 import pandas as pd
 from nltk.corpus import stopwords
@@ -29,8 +18,10 @@ from sklearn.metrics import accuracy_score
 if not sys.warnoptions:
     warnings.simplefilter("ignore")
 
-# Function to preprocess text
 def preprocess_text(data_raw):
+    """
+    Preprocesses the text data by cleaning and removing stopwords.
+    """
     data_raw['Heading'] = (
         data_raw['Heading']
         .str.lower()
@@ -39,98 +30,102 @@ def preprocess_text(data_raw):
         .str.replace(r'<.*?>', '', regex=True)
     )
 
-    nltk.download('stopwords')
+    #nltk.download('stopwords')
     stop_words = set(stopwords.words('swedish'))
 
-    def removeStopWords(sentence):
+    def remove_stopwords(sentence):
         return " ".join([word for word in nltk.word_tokenize(sentence) if word not in stop_words])
 
-    data_raw['Heading'] = data_raw['Heading'].apply(removeStopWords)
+    data_raw['Heading'] = data_raw['Heading'].apply(remove_stopwords)
 
     stemmer = SnowballStemmer("swedish")
 
     def stemming(sentence):
-        stemSentence = ""
-        for word in sentence.split():
-            stem = stemmer.stem(word)
-            stemSentence += stem
-            stemSentence += " "
-        return stemSentence.strip()
+        return " ".join([stemmer.stem(word) for word in sentence.split()])
 
     # Uncomment if stemming is needed
     # data_raw['Heading'] = data_raw['Heading'].apply(stemming)
 
     return data_raw
 
-# 1) Load the data
-data_path = "Book1.csv"  # Adjust path if needed
-data_raw = pd.read_csv(data_path)
+def train_model(data_path):
+    """
+    Trains the machine learning model and returns the best pipeline and vectorizer.
+    """
+    print("Loading data...")
+    data_raw = pd.read_csv(data_path)
 
-# 2) Shuffle the data
-data_raw = data_raw.sample(frac=1)
+    print("Shuffling data...")
+    data_raw = data_raw.sample(frac=1)
 
-# 3) Preprocessing
-categories = list(data_raw.columns.values)
-categories = categories[2:]  # Usually, 'Id' and 'Heading' are the first two columns
-data_raw = preprocess_text(data_raw)
+    print("Preprocessing data...")
+    categories = list(data_raw.columns.values)[2:]  # Excluding 'Id' and 'Heading'
+    data_raw = preprocess_text(data_raw)
 
-# 4) Split the data
-train, test = train_test_split(data_raw, random_state=42, test_size=0.30, shuffle=True)
-train_text = train['Heading']
-test_text = test['Heading']
+    print("Splitting data into train and test sets...")
+    train, test = train_test_split(data_raw, random_state=42, test_size=0.30, shuffle=True)
+    train_text, test_text = train['Heading'], test['Heading']
 
-# 5) Vectorize
-vectorizer = TfidfVectorizer(strip_accents='unicode', analyzer='word', ngram_range=(1, 3), norm='l2')
-vectorizer.fit(train_text)
+    print("Vectorizing text data...")
+    vectorizer = TfidfVectorizer(strip_accents='unicode', analyzer='word', ngram_range=(1, 3), norm='l2')
+    vectorizer.fit(train_text)
 
-x_train = vectorizer.transform(train_text)
-y_train = train.drop(labels=['Id', 'Heading'], axis=1)
+    x_train = vectorizer.transform(train_text)
+    y_train = train.drop(labels=['Id', 'Heading'], axis=1)
 
-x_test = vectorizer.transform(test_text)
-y_test = test.drop(labels=['Id', 'Heading'], axis=1)
+    print("Setting up the ML pipeline...")
+    MultinomialNB_pipeline = Pipeline([
+        ('clf', OneVsRestClassifier(MultinomialNB())),
+    ])
 
-# 6) Setup ML pipeline
-MultinomialNB_pipeline = Pipeline([
-    ('clf', OneVsRestClassifier(MultinomialNB())),
-])
+    print("Performing hyperparameter tuning...")
+    param_grid = {
+        'clf__estimator__alpha': [0.20, 0.21, 0.22],
+        'clf__estimator__fit_prior': [True, False]
+    }
 
-# 7) Hyperparameter Tuning
-param_grid = {
-    'clf__estimator__alpha': [0.20, 0.21, 0.22],
-    'clf__estimator__fit_prior': [True, False]
-}
+    grid = GridSearchCV(MultinomialNB_pipeline, param_grid, cv=5, scoring='accuracy')
+    grid.fit(x_train, y_train)
 
-grid = GridSearchCV(MultinomialNB_pipeline, param_grid, cv=5, scoring='accuracy')
-grid.fit(x_train, y_train)
+    print("Best score: ", grid.best_score_)
+    print("Best params: ", grid.best_params_)
+    print("Best estimator: ", grid.best_estimator_)
 
-print("Best score: ", grid.best_score_)
-print("Best params: ", grid.best_params_)
-print("Best estimator: ", grid.best_estimator_)
+    best_clf_pipeline = grid.best_estimator_
+    best_clf_pipeline.fit(x_train, y_train)
 
-best_clf_pipeline = grid.best_estimator_
-best_clf_pipeline.fit(x_train, y_train)
+    return vectorizer, best_clf_pipeline, categories, test_text, test
 
-# 8) Predict on test data
-y_pred_proba = best_clf_pipeline.predict_proba(x_test)
-threshold = 0.3  # Adjust threshold if needed
-y_pred = (y_pred_proba >= threshold).astype(int)
+def evaluate_model(vectorizer, best_clf_pipeline, test_text, test):
+    """
+    Evaluates the trained model on test data.
+    """
+    print("Transforming test data...")
+    x_test = vectorizer.transform(test_text)
+    y_test = test.drop(labels=['Id', 'Heading'], axis=1)
 
-accuracy = accuracy_score(y_test, y_pred)
-print("Accuracy:", accuracy)
+    print("Predicting test data...")
+    y_pred_proba = best_clf_pipeline.predict_proba(x_test)
+    threshold = 0.3  # Adjust threshold if needed
+    y_pred = (y_pred_proba >= threshold).astype(int)
 
-# # Save objects to a file for later use
-# with open('model_objects.pkl', 'wb') as file:
-#     pickle.dump({
-#         'categories': categories,
-#         'x_train': x_train,
-#         'vectorizer': vectorizer,
-#         'best_clf_pipeline': best_clf_pipeline
-#     }, file)
+    accuracy = accuracy_score(y_test, y_pred)
+    print("Accuracy:", accuracy)
 
-# print("Model objects have been saved to 'model_objects.pkl'.")
+def main():
+    """
+    Main function to orchestrate model training and evaluation.
+    """
+    print('-----Starting MLModelMLC_3.py-----')
+    global categories, vectorizer, best_clf_pipeline  # Make these global for other scripts to import
+    data_path = "Book1.csv"  # Adjust path to your data file
 
-# Expose objects for direct import
-categories = categories
-x_train = x_train
-vectorizer = vectorizer
-best_clf_pipeline = best_clf_pipeline
+    print("Starting model training...")
+    vectorizer, best_clf_pipeline, categories, test_text, test = train_model(data_path)
+
+    print("Evaluating model...")
+    evaluate_model(vectorizer, best_clf_pipeline, test_text, test)
+
+    print("Model training and evaluation completed.")
+if __name__ == "__main__":
+    main()
