@@ -13,8 +13,8 @@ def db_connection():
     try:
         cnxn = mysql.connector.connect(
             host="localhost",  # Hostname
-            user="root",       # Username
-            password="dinmamma",  # Password
+            user="mlg3",       # Username
+            password="denmark4ever",  # Password
             database="ArtiklarDB"  # Database name
         )
         print("Connected to the database.")
