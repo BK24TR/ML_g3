@@ -53,7 +53,7 @@ def format_date(date_str):
 
 def main():
     df = fetch_posts()
-    print(df.head())
+    # print(df.head())
 
 if __name__ == "__main__":
     main()

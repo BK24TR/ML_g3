@@ -101,72 +101,63 @@ y_test = test.drop(labels = ['Id','Heading'], axis=1)
 
 '''WITH PIPELINE'''
 # 6) Setup ML pipeline
-# NB_pipeline = Pipeline([
-#     ('clf', OneVsRestClassifier(MultinomialNB())),
-# ])
+MultinomialNB_pipeline = Pipeline([
+    ('clf', OneVsRestClassifier(MultinomialNB())),
+])
 
-# # 7) Hyperparameter Tuning
-# param_grid = {
-#     'clf__estimator__alpha': [0.01, 0.1, 0.5, 1.0],  # Korrekt namn för parametern
-#     'clf__estimator__fit_prior': [True, False]
-# }
+# 7) Hyperparameter Tuning
+param_grid = {
+    'clf__estimator__alpha': [0.20, 0.21, 0.22],
+    'clf__estimator__fit_prior': [True, False]
+}
 
-# grid = GridSearchCV(
-#     NB_pipeline, 
-#     param_grid, 
-#     cv=5, 
-#     scoring='accuracy', 
-#     n_jobs=-1
-#     )
+grid = GridSearchCV(MultinomialNB_pipeline, param_grid, cv=5, scoring='accuracy')
+grid.fit(x_train, y_train)
 
-# grid.fit(x_train, y_train)  # Använd vektoriserad text, inte råtext!
+# print("Best score: ", grid.best_score_)
+# print("Best params: ", grid.best_params_)
+# print("Best estimator: ", grid.best_estimator_)
 
+best_clf_pipeline = grid.best_estimator_
+best_clf_pipeline.fit(x_train, y_train)
 
-# # Spara den bästa modellen
-# best_clf_pipeline = grid.best_estimator_
+# 8) Predict on test data
+y_pred_proba = best_clf_pipeline.predict_proba(x_test)
+threshold = 0.3  # Adjust threshold if needed
+y_pred = (y_pred_proba >= threshold).astype(int)
 
-# # Träna modellen
-# best_clf_pipeline.fit(x_train, y_train)
-
-# # Gör prediktioner
-# y_pred = best_clf_pipeline.predict(x_test)  # Bytt från predict_proba()
-
-# # Beräkna noggrannhet
-# accuracy = accuracy_score(y_test, y_pred)
+accuracy = accuracy_score(y_test, y_pred)
 # print("Accuracy:", accuracy)
-# print("Best params:", grid.best_params_)
-# print("Best score:", grid.best_score_)
 
 
 '''WITHOUT PIPELINE'''
+# clf = OneVsRestClassifier(MultinomialNB())
+# # Definiera parametergrid för MultinomialNB inom OneVsRestClassifier
+# param_grid = {
+#     'estimator__alpha': [0.20, 0.21, 0.22],  # Smoothing-parameter
+#     'estimator__fit_prior': [True, False]  # Testa om prior sannolikheter hjälper
+# }
 
-clf = OneVsRestClassifier(MultinomialNB())
-# Definiera parametergrid för MultinomialNB inom OneVsRestClassifier
-param_grid = {
-    'estimator__alpha': [0.01, 0.1, 0.5, 1.0],  # Smoothing-parameter
-    'estimator__fit_prior': [True, False]  # Testa om prior sannolikheter hjälper
-}
 
+# # Skapa GridSearchCV för att hitta bästa parametrarna
+# grid_search = GridSearchCV(
+#     estimator=clf,
+#     param_grid=param_grid,
+#     cv=5,  # Cross-validation folds
+#     scoring='f1_weighted',  # Optimerar f1-score
+#     n_jobs=-1  # Kör parallellt på flera kärnor
+# )
 
-# Skapa GridSearchCV för att hitta bästa parametrarna
-grid_search = GridSearchCV(
-    estimator=clf,
-    param_grid=param_grid,
-    cv=5,  # Cross-validation folds
-    scoring='f1_weighted',  # Optimerar f1-score
-    n_jobs=-1  # Kör parallellt på flera kärnor
-)
-
-# Kör GridSearchCV på träningsdatan
-grid_search.fit(x_train, y_train)
+# # Kör GridSearchCV på träningsdatan
+# grid_search.fit(x_train, y_train)
 
 # Visa de bästa parametrarna och poängen
 # print("Best params:", grid_search.best_params_)
 # print("Best score:", grid_search.best_score_)
 
-# Träna om modellen med de bästa parametrarna
-best_clf = grid_search.best_estimator_
-best_clf.fit(x_train, y_train)
+# # Träna om modellen med de bästa parametrarna
+# best_clf = grid_search.best_estimator_
+# best_clf.fit(x_train, y_train)
 
 
 
@@ -174,5 +165,5 @@ best_clf.fit(x_train, y_train)
 categories = categories
 x_train = x_train
 vectorizer = vectorizer
-# best_clf_pipeline = best_clf_pipeline
-best_clf = best_clf
+best_clf_pipeline = best_clf_pipeline
+# best_clf = best_clf
