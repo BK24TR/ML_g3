@@ -223,5 +223,5 @@ if not data.empty:
 else:
     st.write("Ingen data tillgänglig för att skapa ett Word Cloud.")
 
-# cd C:\workspace\ML\ML-course\Gruppuppgift\Final
+# cd C:\workspace\ML\ML_g3\Gruppuppgift
 # streamlit run app.py
