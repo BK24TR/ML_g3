@@ -5,6 +5,10 @@ from sqlalchemy import create_engine
 import plotly.express as px
 import datetime
 import plotly.graph_objects as go
+from wordcloud import WordCloud
+import regex as re
+import nltk
+import matplotlib.pyplot as plt
 
 # 📌 Funktion för att ansluta till MySQL-databasen (NU MED SQLALCHEMY)
 def db_connection():
@@ -180,6 +184,40 @@ elif selected == "Analysis":
     ))
     fig3.update_layout(title="Utveckling av antal artiklar över tid", xaxis_title="Datum", yaxis_title="Antal artiklar", xaxis=dict(range=[start_date, end_date]))
     st.plotly_chart(fig3, use_container_width=True)
+
+    # wordcloud här plz
+    st.subheader("☁️ Most Common Words in Article Topics")
+
+    if not df_filtered.empty and "title" in df_filtered.columns:  # ✅ Check if "topic" exists
+        # Combine all topics into a single text string (removes NaN values)
+        text = " ".join(df_filtered["title"].dropna())  # ✅ Uses "topic" instead of "title"
+
+        # Remove HTML tags and special characters
+        text = re.sub(r"<.*?>", "", text)  # Remove HTML tags
+        text = re.sub(r"[^a-zA-ZåäöÅÄÖ\s]", "", text)  # Remove special characters and numbers
+
+        # 📌 Load Swedish stopwords
+        nltk.download("stopwords")
+        from nltk.corpus import stopwords  
+        swedish_stopwords = set(stopwords.words("swedish"))
+
+        # 📌 Additional words to remove
+        extra_stopwords = {"img", "jpg", "png", "https", "polisen", "stockholm", "sverige", "säger", "ska", "år"}
+        all_stopwords = swedish_stopwords.union(extra_stopwords)
+
+        # 📌 Generate WordCloud
+        wordcloud = WordCloud(width=1200, height=600, max_words=50, background_color="white",
+                            colormap="coolwarm", stopwords=all_stopwords, 
+                            contour_color="black", contour_width=1.5,
+                            prefer_horizontal=0.9, font_path=None).generate(text)
+
+        # 📌 Display WordCloud
+        fig, ax = plt.subplots(figsize=(12, 6))
+        ax.imshow(wordcloud, interpolation="bilinear")
+        ax.axis("off")  # Hide axes
+        st.pyplot(fig)
+    else:
+        st.write("No data available or the 'topic' column is missing.")
 
 elif selected == "Conclusion":
     st.title("📋 Slutsats")
