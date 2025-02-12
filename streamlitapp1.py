@@ -9,8 +9,10 @@ from wordcloud import WordCloud
 import regex as re
 import nltk
 import matplotlib.pyplot as plt
+from nltk.corpus import stopwords
+# nltk.download("stopwords") # se till att den är nerladdad innan du kör allt
 
-# 📌 Funktion för att ansluta till MySQL-databasen (NU MED SQLALCHEMY)
+# Funktion för att ansluta till MySQL-databasen (NU MED SQLALCHEMY)
 def db_connection():
     try:
         database_url = "mysql+mysqlconnector://mlg3:denmark4ever@localhost/ArtiklarDB"
@@ -20,14 +22,14 @@ def db_connection():
         st.error(f"Database connection error: {err}")
         return None
 
-# 📌 Hämta data från MySQL
+# Hämta data från MySQL
 def get_data():
     engine = db_connection()
     if engine:
         query = "SELECT * FROM News"
         df = pd.read_sql(query, engine, index_col="id")  
         
-        # 🕒 Konvertera "published" till datetime och skapa en ren datumkolumn
+        # Konvertera "published" till datetime och skapa en ren datumkolumn
         if "published" in df.columns:
             df["published"] = pd.to_datetime(df["published"], errors="coerce")
             df["date"] = df["published"].dt.date
@@ -35,17 +37,17 @@ def get_data():
     else:
         return pd.DataFrame()
 
-# 📌 Streamlit Konfiguration
+# Streamlit Konfiguration
 st.set_page_config(page_title="ML 4 the Win", layout="wide")
 df = get_data()
 
-# 📌 Banner överst
+# Banner överst
 st.markdown("""
     <h1 style='text-align: center; background-color: #2C2C2F; color: white; padding: 15px;'>ML 4 the Win</h1>
     """, unsafe_allow_html=True)
 st.markdown("<br>", unsafe_allow_html=True)
 
-# 📌 SIDOFÄLT - Navigation & Dynamiska Filter
+# SIDOFÄLT - Navigation & Dynamiska Filter
 st.sidebar.header("🔍 Navigation & Filter")
 
 with st.sidebar:
@@ -56,8 +58,8 @@ with st.sidebar:
         default_index=0,
     )
 
-# 📌 Dynamiska filter - visas bara när de behövs
-startdatum = datetime.date(2025, 2, 1)
+# Dynamiska filter - visas bara när de behövs
+startdatum = datetime.date(2025, 1, 25)
 slutdatum = datetime.date(2025, 2, 28)
 
 if selected in ["Data", "Analysis"]:
@@ -77,7 +79,7 @@ if selected == "Data":
 else:
     search_query = ""  # Om vi inte är på "Data", ställ in som tom sträng
 
-# 📌 Fix: Ensure date range always has two values
+# Fix: Ensure date range always has two values
 if selected in ["Data", "Analysis"]:
     if len(date_range) == 1:
         start_date = date_range[0]
@@ -92,7 +94,7 @@ else:
     start_date = startdatum
     end_date = slutdatum
 
-# 📌 Filtrera datasetet endast vid behov
+# Filtrera datasetet endast vid behov
 df_filtered = df.copy()
 
 if selected in ["Data", "Analysis"]:
@@ -106,7 +108,7 @@ if selected == "Data" and search_query:
         df_filtered["summary"].str.lower().str.contains(search_query, na=False)
     ]
 
-# 📌 KPI-Beräkningar (göm KPIer om "Conclusion" är vald)
+# KPI-Beräkningar (göm KPIer om "Conclusion" är vald)
 if selected != "Conclusion":
     total_articles = len(df_filtered)
     articles_with_topic = (df_filtered["topic"] != "").sum()
@@ -128,9 +130,9 @@ if selected != "Conclusion":
     with col3:
         st.markdown(kpi_template.format(title="📈 Andel med ämne (%)", value=f"{percentage_with_topic:.2f}%"), unsafe_allow_html=True)
 
-# 📌 MENYVAL
+# MENYVAL
 if selected == "Front Page":
-    st.subheader("📄 Dataförhandsvisning (Topp 10 rader)")
+    st.subheader("📄 Dataförhandsvisning (10 rader)")
     st.dataframe(df.head(10))
 
 elif selected == "Data":
@@ -140,7 +142,7 @@ elif selected == "Data":
 elif selected == "Analysis":
     st.title("📊 Dataanalys & Diagram")
 
-    # 📊 Diagram 1: Antal artiklar per kategori
+    # Diagram 1: Antal artiklar per kategori
     if category_columns:
         articles_per_category = df_filtered[category_columns].sum().reset_index()
         articles_per_category.columns = ["Kategori", "Antal Artiklar"]
@@ -156,7 +158,7 @@ elif selected == "Analysis":
         fig1.update_layout(title="Antal artiklar per kategori", xaxis_title="Kategori", yaxis_title="Antal artiklar")
         st.plotly_chart(fig1, use_container_width=True)
 
-    # 📊 Diagram 2: Antal artiklar per dag
+    # Diagram 2: Antal artiklar per dag
     articles_per_day = df_filtered.groupby("date").size().reset_index()
     articles_per_day.columns = ["Datum", "Antal Artiklar"]
 
@@ -171,7 +173,7 @@ elif selected == "Analysis":
     fig2.update_layout(title="Antal artiklar per dag", xaxis_title="Datum", yaxis_title="Antal artiklar", xaxis=dict(range=[start_date, end_date]))
     st.plotly_chart(fig2, use_container_width=True)
 
-    # 📈 Diagram 3: Utveckling över tid
+    # Diagram 3: Utveckling över tid
     fig3 = go.Figure()
     fig3.add_trace(go.Scatter(
         x=articles_per_day["Datum"],
@@ -188,30 +190,28 @@ elif selected == "Analysis":
     # wordcloud här plz
     st.subheader("☁️ Most Common Words in Article Topics")
 
-    if not df_filtered.empty and "title" in df_filtered.columns:  # ✅ Check if "topic" exists
+    if not df_filtered.empty and "title" in df_filtered.columns:  # Check if "topic" exists
         # Combine all topics into a single text string (removes NaN values)
-        text = " ".join(df_filtered["title"].dropna())  # ✅ Uses "topic" instead of "title"
+        text = " ".join(df_filtered["title"].dropna())  # Uses "topic" instead of "title"
 
         # Remove HTML tags and special characters
         text = re.sub(r"<.*?>", "", text)  # Remove HTML tags
         text = re.sub(r"[^a-zA-ZåäöÅÄÖ\s]", "", text)  # Remove special characters and numbers
 
-        # 📌 Load Swedish stopwords
-        nltk.download("stopwords")
-        from nltk.corpus import stopwords  
+        # Load Swedish stopwords  
         swedish_stopwords = set(stopwords.words("swedish"))
 
-        # 📌 Additional words to remove
-        extra_stopwords = {"img", "jpg", "png", "https", "polisen", "stockholm", "sverige", "säger", "ska", "år"}
+        # Additional words to remove
+        extra_stopwords = {"img", "jpg", "png", "https", "polisen", "säger", "ska", "år"}
         all_stopwords = swedish_stopwords.union(extra_stopwords)
 
-        # 📌 Generate WordCloud
+        # Generate WordCloud
         wordcloud = WordCloud(width=1200, height=600, max_words=50, background_color="white",
                             colormap="coolwarm", stopwords=all_stopwords, 
                             contour_color="black", contour_width=1.5,
                             prefer_horizontal=0.9, font_path=None).generate(text)
 
-        # 📌 Display WordCloud
+        # Display WordCloud
         fig, ax = plt.subplots(figsize=(12, 6))
         ax.imshow(wordcloud, interpolation="bilinear")
         ax.axis("off")  # Hide axes

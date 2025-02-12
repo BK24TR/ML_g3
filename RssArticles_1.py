@@ -1,3 +1,9 @@
+#################################################################################
+#                                                                               #
+#  Grupp 3: Cristian Troncoso, John Hagström, Tobias Englund, Valle Andersson   #
+#                                                                               #
+#################################################################################
+
 # Description: This script fetches articles from a list of RSS feeds and
 #  stores them in a list of dictionaries.
 import feedparser  
