@@ -307,8 +307,8 @@ elif selected == "Analys":
         st.write("No data available or the 'topic' column is missing.")
 
 elif selected == "Sammanfattning":
-    st.title("📋 Slutsats")
-    st.markdown("<h2 style='text-align: left;'>Resultat och slutsats</h2>", unsafe_allow_html=True)
+    st.title("📋 Sammanfattning")
+    st.markdown("<h2 style='text-align: left;'>Resultat</h2>", unsafe_allow_html=True)
 
     st.write("""
     - **Övervikt av vissa kategorier:** De flesta nyhetsartiklar handlar om samhälle och konflikter, vilket kan göra det svårare för modellen att korrekt kategorisera andra ämnen, såsom religion eller utbildning.
