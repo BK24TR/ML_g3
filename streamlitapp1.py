@@ -10,9 +10,9 @@ import regex as re
 import nltk
 import matplotlib.pyplot as plt
 from nltk.corpus import stopwords
-# nltk.download("stopwords") # se till att den är nerladdad innan du kör allt
+# nltk.download("stopwords") ## remove the first comment the first time you run this to ensure you download the stopwords (keep the second comment as is)
 
-# Funktion för att ansluta till MySQL-databasen (NU MED SQLALCHEMY)
+# Connection to MySQL using SQLALCHEMY
 def db_connection():
     try:
         database_url = "mysql+mysqlconnector://mlg3:denmark4ever@localhost/ArtiklarDB"
@@ -22,14 +22,14 @@ def db_connection():
         st.error(f"Database connection error: {err}")
         return None
 
-# Hämta data från MySQL och ändra kolumnnamn direkt
+# Getting the data from MySQL database
 def get_data():
     engine = db_connection()
     if engine:
         query = "SELECT * FROM News"
         df = pd.read_sql(query, engine, index_col="id")  
 
-        # Byt kolumnnamn direkt vid inläsning
+        # Cleaning up the naming structure within the dataframe to present it in a more user-friendly way
         column_rename_map = {
             "id": "Index",
             "title": "Titel",
@@ -51,7 +51,7 @@ def get_data():
 
         df.rename(columns=column_rename_map, inplace=True)
 
-        # Konvertera "Publicerad" till datetime och skapa en ren datumkolumn
+        # creates "Datum" column from "Publicerad" column to ensure we can filter by date properly
         if "Publicerad" in df.columns:
             df["Publicerad"] = pd.to_datetime(df["Publicerad"], errors="coerce")
             df["Datum"] = df["Publicerad"].dt.date
@@ -61,7 +61,7 @@ def get_data():
         return pd.DataFrame()
 
 
-# Streamlit Konfiguration
+# Streamlit configuration
 st.set_page_config(page_title="ML av Grupp 3", layout="wide")
 df = get_data()
 
@@ -80,13 +80,13 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# Banner överst
+# Headline banner
 st.markdown("""
     <h1 style='text-align: center; background-color: #091043; border-radius: 10px; color: white; padding: 15px;'>Automatisk Nyhetsklassificering – Grupp 3</h1>
     """, unsafe_allow_html=True)
 st.markdown("<br>", unsafe_allow_html=True)
 
-# SIDOFÄLT - Navigation & Dynamiska Filter
+# Sidebar for navigation and filters
 st.sidebar.header("🔍 Navigation & Filter")
 
 with st.sidebar:
@@ -114,7 +114,7 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 
-# Dynamiska filter - visas bara när de behövs
+# Dynamic filters, only shown when needed
 st.markdown("""
     <style>
         /* Gör all text i sidofältets widgets vit */
@@ -142,7 +142,7 @@ if selected in ["Data", "Analys"]:
 if selected == "Data":
     search_query = st.sidebar.text_input("Sök efter nyckelord", key="search_filter").strip().lower()
 else:
-    search_query = ""  # Om vi inte är på "Data", ställ in som tom sträng
+    search_query = ""  # If not in "Data", we set it as empty string
 
 # Fix: Ensure date range always has two values
 if selected in ["Data", "Analys"]:
@@ -159,7 +159,7 @@ else:
     start_date = startdatum
     end_date = slutdatum
 
-# Filtrera datasetet endast vid behov
+# Applying filters if/when they are needed
 df_filtered = df.copy()
 
 if selected in ["Data", "Analys"]:
@@ -173,7 +173,7 @@ if selected == "Data" and search_query:
         df_filtered["Summering"].str.lower().str.contains(search_query, na=False)
     ]
 
-# KPI-Beräkningar (göm KPIer om "Conclusion" är vald)
+# KPI-cards (hide KPI if we choose "Sammanfattning")
 if selected != "Sammanfattning":
     total_articles = len(df_filtered)
     articles_with_topic = (df_filtered["Ämne"] != "").sum()
@@ -195,7 +195,7 @@ if selected != "Sammanfattning":
     with col3:
         st.markdown(kpi_template.format(title="📈 Andel med ämne (%)", value=f"{percentage_with_topic:.2f}%"), unsafe_allow_html=True)
 
-# MENYVAL
+# Menu choices based on selection in sidebar
 if selected == "Start":
     st.subheader("📄 Dataförhandsvisning (10 rader)")
     df_preview = df.head(10).drop(columns=["Datum"], errors="ignore")  # Ta bort "date" vid visning
@@ -209,7 +209,7 @@ elif selected == "Data":
 elif selected == "Analys":
     st.title("📊 Dataanalys & Diagram")
 
-    # Diagram 1: Antal artiklar per kategori
+    # Articles per category in bar chart
     if category_columns:
         articles_per_category = df_filtered[category_columns].sum().reset_index()
         articles_per_category.columns = ["Kategori", "Antal Artiklar"]
@@ -225,7 +225,7 @@ elif selected == "Analys":
         fig1.update_layout(title="Antal artiklar per kategori", xaxis_title="Kategori", yaxis_title="Antal artiklar")
         st.plotly_chart(fig1, use_container_width=True)
 
-    # Diagram 2: Antal artiklar per dag
+    # Articles per day in bar chart
     articles_per_day = df_filtered.groupby("Datum").size().reset_index()
     articles_per_day.columns = ["Datum", "Antal Artiklar"]
 
@@ -240,29 +240,29 @@ elif selected == "Analys":
     fig2.update_layout(title="Antal artiklar per dag", xaxis_title="Datum", yaxis_title="Antal artiklar", xaxis=dict(range=[start_date, end_date]))
     st.plotly_chart(fig2, use_container_width=True)
 
-    # Diagram 3: Utveckling över tid
+    # total articles added per day summarized
     articles_per_day["Kumulativ Antal Artiklar"] = articles_per_day["Antal Artiklar"].cumsum()
 
-    # Diagram 3: Utveckling över tid (Ackumulerad total)
+    # Total articles over time
     fig3 = go.Figure()
     fig3.add_trace(go.Scatter(
         x=articles_per_day["Datum"],
-        y=articles_per_day["Kumulativ Antal Artiklar"],  # Ändrat till ackumulerad total
+        y=articles_per_day["Kumulativ Antal Artiklar"], 
         mode="lines+markers",
         marker=dict(color="#FFD700", size=8),
         line=dict(color="#FFD700", width=2),
-        text=articles_per_day["Kumulativ Antal Artiklar"],  # Uppdaterad text
+        text=articles_per_day["Kumulativ Antal Artiklar"], 
         textposition="top center"
     ))
     fig3.update_layout(
         title="Utveckling av antal artiklar över tid",
         xaxis_title="Datum",
-        yaxis_title="Ackumulerat antal artiklar",  # Uppdaterad y-titel
+        yaxis_title="Ackumulerat antal artiklar", 
         xaxis=dict(range=[start_date, end_date])
     )
     st.plotly_chart(fig3, use_container_width=True)
 
-    # wordcloud här plz
+    # wordcloud
     st.subheader("☁️ Vanligast förekommande orden")
 
     if not df_filtered.empty and "Titel" in df_filtered.columns:  # Check if "topic" exists
