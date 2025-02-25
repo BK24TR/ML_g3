@@ -127,6 +127,9 @@ st.markdown("""
 startdatum = datetime.date(2025, 1, 25)
 slutdatum = datetime.date(2025, 2, 28)
 
+# Applying filters if/when they are needed
+df_filtered = df.copy()
+
 if selected in ["Data", "Analys"]:
     category_columns = [col for col in df.columns if col not in ["Index", "Titel", "Summering", "Länk", "Publicerad", "Ämne", "Datum"]]
     category_dropdown_options = ["Alla"] + category_columns
@@ -144,6 +147,24 @@ if selected == "Data":
 else:
     search_query = ""  # If not in "Data", we set it as empty string
 
+if selected == "Data" and search_query:
+    words = [word.lower() for word in search_query.split() if word]  # Convert to lowercase and remove empty strings
+
+    # Start a mask with all True values
+    mask = pd.Series(True, index=df_filtered.index)
+
+    for word in words:
+        mask &= (
+            df_filtered["Titel"].str.lower().str.contains(word, na=False) |
+            df_filtered["Summering"].str.lower().str.contains(word, na=False)
+        )
+
+    df_filtered = df_filtered[mask]  # Use boolean mask to filter rows
+
+    # Debugging: Show search query and number of matched rows
+    # st.write(f"Sökord: {words}")
+    # st.write(f"Antal matchade rader: {len(df_filtered)}")
+
 # Fix: Ensure date range always has two values
 if selected in ["Data", "Analys"]:
     if len(date_range) == 1:
@@ -159,19 +180,10 @@ else:
     start_date = startdatum
     end_date = slutdatum
 
-# Applying filters if/when they are needed
-df_filtered = df.copy()
-
 if selected in ["Data", "Analys"]:
     if category != "Alla":
         df_filtered = df_filtered[df_filtered[category] == 1]
     df_filtered = df_filtered[(df_filtered["Datum"] >= start_date) & (df_filtered["Datum"] <= end_date)]
-
-if selected == "Data" and search_query:
-    df_filtered = df_filtered[
-        df_filtered["Titel"].str.lower().str.contains(search_query, na=False) |
-        df_filtered["Summering"].str.lower().str.contains(search_query, na=False)
-    ]
 
 # KPI-cards (hide KPI if we choose "Sammanfattning")
 if selected != "Sammanfattning":
